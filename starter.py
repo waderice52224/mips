@@ -15,12 +15,7 @@ def main():
             lines[lines.index(i)] = i[:index]
             i = i[:index]
         lines[lines.index(i)] = i.strip()
-    for i in lines:
-        if lines[lines.index(i)] == '':
-            lines.remove(i)
-    for i in lines:
-        if lines[lines.index(i)] == '':
-            lines.remove(i)
+    lines = [line for line in lines if line != '']
     # Step 2: Use the preprocessed program to build data table
     data_table = build_data_table(lines)
     data_list = build_data_list(lines)
@@ -150,15 +145,15 @@ def encode_instruction(line_num, instruction, label_table, data_table):
         case "bne":
             final = bneFunc(instr_array, label_table, line_num)
         case "lw":
-            final = lwFunc(instr_array)
+            final = lwFunc(instr_array, data_table)
         case "sw":
-            final = swFunc(instr_array)
+            final = swFunc(instr_array, data_table)
         case "j":
             final = jFunc(instr_array, label_table)
         case "jr":
-            final = jrFunc()
+            final = jrFunc(instr_array)
         case "jal":
-            final = jalFunc()
+            final = jalFunc(instr_array, label_table)
         case _:
             final = print("Unknown instruction")
     return final
@@ -267,29 +262,34 @@ def bneFunc(instr_line, label_table, line_num):
     return final
 
 
-def lwFunc(instr_line):
+def lwFunc(instr_line, data_table):
     opcode = "0001"
     rt = int("".join(c for c in instr_line[1] if c.isdigit()))
     rt_bin = format(rt, '03b')
     offset, base_reg = instr_line[2].replace(")", "").split("(")
-    offset = int(offset.strip())
-    offset_bin = format(offset, '06b')
+    if not offset.strip().isdigit():
+        label = offset.strip()
+        offset_value = data_table.get(label, 0)
+    else:
+        offset_value = int(offset.strip())
+    offset_bin = format(offset_value, '06b')
     rs = int("".join(c for c in base_reg.strip() if c.isdigit()))
     rs_bin = format(rs, '03b')
     final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + offset_bin
-
     return final
 
 
-
-
-def swFunc(instr_line):
+def swFunc(instr_line, data_table):
     opcode = "0010"
     rt = int("".join(c for c in instr_line[1] if c.isdigit()))
     rt_bin = format(rt, '03b')
     offset, base_reg = instr_line[2].replace(")", "").split("(")
-    offset = int(offset.strip())
-    offset_bin = format(offset & 0x3F, '06b')
+    if not offset.strip().isdigit():
+        label = offset.strip()
+        offset_value = data_table.get(label, 0)  # Get the label's address or default to 0 if not found
+    else:
+        offset_value = int(offset.strip())
+    offset_bin = format(offset_value & 0x3F, '06b')  # Ensure it's within 6 bits
     rs = int("".join(c for c in base_reg.strip() if c.isdigit()))
     rs_bin = format(rs, '03b')
     final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + offset_bin
@@ -304,12 +304,37 @@ def jFunc(instr_array, label_table):
     final = str(opcode) + " " + target_address_bin
     return final
 
-# def jrFunc():
-#     print("Executing jr")
-#
-#
-# def jalFunc():
-#     print("Executing jal")
+
+def jrFunc(instr_line):
+    # Opcode for jr is '000000' (6 bits, R-type instruction)
+    opcode = "0111"
+
+    # Extract the register number for rs (e.g., R5 or R7)
+    rs = int("".join(c for c in instr_line[1] if c.isdigit()))  # Register (e.g., R5 or R7)
+    rs_bin = format(rs, '03b')  # Convert rs to 5-bit binary
+
+    # rt, rd, shamt are not used in jr, so these are always zero
+    rt_bin = "000"
+    rd_bin = "000"
+
+
+    # The funct field for jr is '001000' (6 bits)
+    funct_bin = "000"
+
+    # Final instruction
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + rd_bin + " " + funct_bin
+
+    return final
+
+
+def jalFunc(instr_line, label_table):
+    opcode = "1000"
+    label = instr_line[1]
+    label_address = label_table[label]
+    target_address = label_address
+    target_address_bin = format(target_address, '012b')
+    final = str(opcode) + " " + target_address_bin
+    return final
 
 
 main()
