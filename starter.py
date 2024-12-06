@@ -1,3 +1,4 @@
+import re
 def main():
     # Defining the assembly file to read from
     filename = "textfiles/countdown.asm"
@@ -10,8 +11,9 @@ def main():
     # lines = preprocess_lines(lines)
     for i in lines:
         index = i.find("#")
-        lines[lines.index(i)] = i[:index]
-        i = i[:index]
+        if index != -1:
+            lines[lines.index(i)] = i[:index]
+            i = i[:index]
         lines[lines.index(i)] = i.strip()
     for i in lines:
         if lines[lines.index(i)] == '':
@@ -19,7 +21,6 @@ def main():
     for i in lines:
         if lines[lines.index(i)] == '':
             lines.remove(i)
-
     # Step 2: Use the preprocessed program to build data table
     data_table = build_data_table(lines)
     data_list = build_data_list(lines)
@@ -30,11 +31,10 @@ def main():
     # Step 3: Build a label table and strip out the labels from the code
     # label_table, lines = create_label_table(lines)
     label_table = create_label_table(lines)
-
     # Step 4: Encode the program into a list of binary strings
     # encoded_program = encode_program(lines, label_table, data_table)
     for i in lines:
-        encode_instruction(lines.index(i), i, label_table, data_table)
+        print(encode_instruction(lines.index(i), i, label_table, data_table))
 
 
 
@@ -126,103 +126,190 @@ def create_label_table(lines):
         else:
             value += 1
             i += 1
-
-
     return label_table
 
 def encode_instruction(line_num, instruction, label_table, data_table):
-    print(line_num, end="| ")
-    print(instruction, end="| ")
-    print(label_table, end="| ")
-    print(data_table, end="| ")
-    print()
-    instr_array = instruction.split()
+    instr_array = re.split(r'[,\s]+', instruction)
     instr = instr_array[0]
 
     match instr:
         case "add":
-            addFunc()
+            final = addFunc(instr_array)
         case "sub":
-            subFunc()
+            final = subFunc(instr_array)
         case "and":
-            andFunc()
+            final = andFunc(instr_array)
         case "or":
-            orFunc()
+            final = orFunc(instr_array)
         case "slt":
-            sltFunc()
+            final = sltFunc(instr_array)
         case "addi":
-            addiFunc(instr_array)
+            final = addiFunc(instr_array)
         case "beq":
-            beqFunc()
+            final = beqFunc(instr_array, label_table)
         case "bne":
-            bneFunc()
+            final = bneFunc(instr_array, label_table, line_num)
         case "lw":
-            lwFunc()
+            final = lwFunc(instr_array)
         case "sw":
-            swFunc()
+            final = swFunc(instr_array)
         case "j":
-            jFunc()
+            final = jFunc(instr_array, label_table)
         case "jr":
-            jrFunc()
+            final = jrFunc()
         case "jal":
-            jalFunc()
+            final = jalFunc()
         case _:
-            print("Unknown instruction")
+            final = print("Unknown instruction")
+    return final
+
+def addFunc(instr_array):
+    opcode = "0000"
+    rs = int("".join(c for c in instr_array[2] if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    rt = int("".join(c for c in instr_array[3] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    rd = int("".join(c for c in instr_array[1] if c.isdigit()))
+    rd_bin = format(rd, '03b')
+    funct = "010"
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + rd_bin + " " + funct
+    return final
+def subFunc(instr_line):
+    opcode = "0000"
+    rs = int("".join(c for c in instr_line[2] if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    rt = int("".join(c for c in instr_line[3] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    rd = int("".join(c for c in instr_line[1] if c.isdigit()))
+    rd_bin = format(rd, '03b')
+    funct = "110"
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + rd_bin + " " + funct
+    return final
 
 
-def addFunc():
-    print("Executing add")
 
+def andFunc(instr_line):
+    opcode = "0000"
+    rs = int("".join(c for c in instr_line[2] if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    rt = int("".join(c for c in instr_line[3] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    rd = int("".join(c for c in instr_line[1] if c.isdigit()))
+    rd_bin = format(rd, '03b')
+    funct = "000"
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + rd_bin + " " + funct
+    return final
 
-def subFunc():
-    print("Executing sub")
+def orFunc(instr_line):
+    opcode = "0000"
+    rs = int("".join(c for c in instr_line[2] if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    rt = int("".join(c for c in instr_line[3] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    rd = int("".join(c for c in instr_line[1] if c.isdigit()))
+    rd_bin = format(rd, '03b')
+    funct = "001"
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + rd_bin + " " + funct
+    return final
 
+def sltFunc(instr_line):
+    opcode = "0000"
+    rs = int("".join(c for c in instr_line[2] if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    rt = int("".join(c for c in instr_line[3] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    rd = int("".join(c for c in instr_line[1] if c.isdigit()))
+    rd_bin = format(rd, '03b')
+    funct = "111"
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + rd_bin + " " + funct
+    return final
 
-def andFunc():
-    print("Executing and")
-
-
-def orFunc():
-    print("Executing or")
-
-
-def sltFunc():
-    print("Executing slt")
 
 
 def addiFunc(instr_array):
-    print(instr_array)
     opcode = "0101"
-    target_reg = "000"
+    rs = int("".join(c for c in instr_array[1] if c.isdigit()))
+    rs = format(rs, '03b')
+    rt = int("".join(c for c in instr_array[2] if c.isdigit()))
+    rt = format(rt, '03b')
+    target = int(instr_array[3])
+    target = format(target, '06b')
+    final = str(opcode) + " " + str(rt) + " " + str(rs) + " " + target
+    return final
 
 
 
-def beqFunc():
-    print("Executing beq")
+
+def beqFunc(instr_array, label_table):
+    opcode = "0011"
+    rs = int("".join(c for c in instr_array[2] if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    rt = int("".join(c for c in instr_array[1] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    label = instr_array[3]
+    target_address = label_table[label]
+    target_address_bin = format(target_address, '06b')
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + target_address_bin
+    return final
 
 
-def bneFunc():
-    print("Executing bne")
+def bneFunc(instr_line, label_table, line_num):
+    opcode = "0110"
+    rt = int("".join(c for c in instr_line[1] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    rs = int("".join(c for c in instr_line[2] if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    label = instr_line[3]
+    label_address = label_table[label]
+    offset = label_address - line_num - 1
+    offset_bin = format(offset & 0x3F, '06b')
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + offset_bin
+    return final
 
 
-def lwFunc():
-    print("Executing lw")
+def lwFunc(instr_line):
+    opcode = "0001"
+    rt = int("".join(c for c in instr_line[1] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    offset, base_reg = instr_line[2].replace(")", "").split("(")
+    offset = int(offset.strip())
+    offset_bin = format(offset, '06b')
+    rs = int("".join(c for c in base_reg.strip() if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + offset_bin
+
+    return final
 
 
-def swFunc():
-    print("Executing sw")
 
 
-def jFunc():
-    print("Executing j")
+def swFunc(instr_line):
+    opcode = "0010"
+    rt = int("".join(c for c in instr_line[1] if c.isdigit()))
+    rt_bin = format(rt, '03b')
+    offset, base_reg = instr_line[2].replace(")", "").split("(")
+    offset = int(offset.strip())
+    offset_bin = format(offset & 0x3F, '06b')
+    rs = int("".join(c for c in base_reg.strip() if c.isdigit()))
+    rs_bin = format(rs, '03b')
+    final = str(opcode) + " " + rs_bin + " " + rt_bin + " " + offset_bin
+    return final
 
 
-def jrFunc():
-    print("Executing jr")
+def jFunc(instr_array, label_table):
+    opcode = "0100"
+    label = instr_array[1]
+    target_address = label_table[label]
+    target_address_bin = format(target_address, '012b')
+    final = str(opcode) + " " + target_address_bin
+    return final
 
-
-def jalFunc():
-    print("Executing jal")
+# def jrFunc():
+#     print("Executing jr")
+#
+#
+# def jalFunc():
+#     print("Executing jal")
 
 
 main()
